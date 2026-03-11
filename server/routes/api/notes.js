@@ -9,7 +9,6 @@ let nextId = 1;
 
 // @route    POST api/notes
 // @desc     Create a new note
-// @access   Public
 router.post('/', validateBody(createNoteSchema), (req, res) => {
   try {
     const { title, content } = req.body;
@@ -35,11 +34,38 @@ router.post('/', validateBody(createNoteSchema), (req, res) => {
 });
 
 // @route    GET api/notes
-// @desc     Get all notes
+// @desc     Get all notes with pagination
 router.get('/', (req, res) => {
   try {
-    console.log(`[NOTES API] Fetching all notes. Total: ${notes.length}`);
-    res.json(notes);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    if (page < 1 || limit < 1) {
+      return res.status(400).json({ msg: 'Page and limit must be positive integers' });
+    }
+
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+
+    const paginatedNotes = notes.slice(startIndex, endIndex);
+    const totalNotes = notes.length;
+    const totalPages = Math.ceil(totalNotes / limit);
+
+    const pagination = {
+      currentPage: page,
+      totalPages,
+      totalNotes,
+      limit,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1
+    };
+
+    console.log(`[NOTES API] Fetching notes - Page: ${page}, Limit: ${limit}, Total: ${totalNotes}`);
+
+    res.json({
+      notes: paginatedNotes,
+      pagination
+    });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
@@ -69,7 +95,6 @@ router.get('/:id', (req, res) => {
 
 // @route    PUT api/notes/:id
 // @desc     Update a note
-// @access   Public
 router.put('/:id', validateBody(updateNoteSchema), (req, res) => {
   try {
     const noteId = parseInt(req.params.id);
@@ -82,12 +107,14 @@ router.put('/:id', validateBody(updateNoteSchema), (req, res) => {
 
     const { title, content } = req.body;
 
-    // Update note fields
+    // Update note fields if not undefined
     if (title !== undefined) notes[noteIndex].title = title;
     if (content !== undefined) notes[noteIndex].content = content;
+
     notes[noteIndex].updatedAt = new Date().toISOString();
 
     console.log(`[NOTES API] Updated note with ID: ${noteId}`);
+
     res.json(notes[noteIndex]);
   } catch (err) {
     console.error(err.message);
@@ -97,14 +124,17 @@ router.put('/:id', validateBody(updateNoteSchema), (req, res) => {
 
 // @route    DELETE api/notes/:id
 // @desc     Delete a note
-// @access   Public
 router.delete('/:id', (req, res) => {
   try {
+    // convert the id to an integer
     const noteId = parseInt(req.params.id);
+
     const noteIndex = notes.findIndex(n => n.id === noteId);
 
+    // return 404 if note not found
     if (noteIndex === -1) {
       console.log(`[NOTES API] Note not found for deletion with ID: ${noteId}`);
+
       return res.status(404).json({ msg: 'Note not found' });
     }
 
@@ -114,9 +144,10 @@ router.delete('/:id', (req, res) => {
     console.log(`[NOTES API] Deleted note with ID: ${noteId}`);
     console.log(`[NOTES API] Remaining notes: ${notes.length}`);
 
-    res.json({ msg: 'Note deleted', note: deletedNote });
+    res.json({ message: 'Note deleted', note: deletedNote });
   } catch (err) {
     console.error(err.message);
+    
     res.status(500).send('Server Error');
   }
 });
