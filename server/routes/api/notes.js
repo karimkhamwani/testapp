@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { check, validationResult } = require('express-validator');
+const validateBody = require('../../middleware/validateBody');
+const { createNoteSchema, updateNoteSchema } = require('../../validators/noteValidator');
 
 // In-memory data structure to store notes
 let notes = [];
@@ -8,42 +9,30 @@ let nextId = 1;
 
 // @route    POST api/notes
 // @desc     Create a new note
-router.post(
-  '/',
-  [
-    check('title', 'Title is required').notEmpty(),
-    check('content', 'Content is required').notEmpty()
-  ],
-  (req, res) => {
-    const errors = validationResult(req);
+// @access   Public
+router.post('/', validateBody(createNoteSchema), (req, res) => {
+  try {
+    const { title, content } = req.body;
 
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
+    const newNote = {
+      id: nextId++,
+      title,
+      content,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
 
-    try {
-      const { title, content } = req.body;
+    notes.push(newNote);
+    
+    console.log(`[NOTES API] Created new note with ID: ${newNote.id}`);
+    console.log(`[NOTES API] Total notes: ${notes.length}`);
 
-      const newNote = {
-        id: nextId++,
-        title,
-        content,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      notes.push(newNote);
-      
-      console.log(`[NOTES API] Created new note with ID: ${newNote.id}`);
-      console.log(`[NOTES API] Total notes: ${notes.length}`);
-
-      res.status(201).json(newNote);
-    } catch (err) {
-      console.error(err.message);
-      res.status(500).send('Server Error');
-    }
+    res.status(201).json(newNote);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
   }
-);
+});
 
 // @route    GET api/notes
 // @desc     Get all notes
@@ -80,43 +69,31 @@ router.get('/:id', (req, res) => {
 
 // @route    PUT api/notes/:id
 // @desc     Update a note
-router.put(
-  '/:id',
-  [
-    check('title', 'Title is required').optional().notEmpty(),
-    check('content', 'Content is required').optional().notEmpty()
-  ],
-  (req, res) => {
-    const errors = validationResult(req);
-    
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+// @access   Public
+router.put('/:id', validateBody(updateNoteSchema), (req, res) => {
+  try {
+    const noteId = parseInt(req.params.id);
+    const noteIndex = notes.findIndex(n => n.id === noteId);
+
+    if (noteIndex === -1) {
+      console.log(`[NOTES API] Note not found for update with ID: ${noteId}`);
+      return res.status(404).json({ msg: 'Note not found' });
     }
 
-    try {
-      const noteId = parseInt(req.params.id);
-      const noteIndex = notes.findIndex(n => n.id === noteId);
+    const { title, content } = req.body;
 
-      if (noteIndex === -1) {
-        console.log(`[NOTES API] Note not found for update with ID: ${noteId}`);
-        return res.status(404).json({ msg: 'Note not found' });
-      }
+    // Update note fields
+    if (title !== undefined) notes[noteIndex].title = title;
+    if (content !== undefined) notes[noteIndex].content = content;
+    notes[noteIndex].updatedAt = new Date().toISOString();
 
-      const { title, content } = req.body;
-
-      // Update note fields
-      if (title !== undefined) notes[noteIndex].title = title;
-      if (content !== undefined) notes[noteIndex].content = content;
-      notes[noteIndex].updatedAt = new Date().toISOString();
-
-      console.log(`[NOTES API] Updated note with ID: ${noteId}`);
-      res.json(notes[noteIndex]);
-    } catch (err) {
-      console.error(err.message);
-      res.status(500).send('Server Error');
-    }
+    console.log(`[NOTES API] Updated note with ID: ${noteId}`);
+    res.json(notes[noteIndex]);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
   }
-);
+});
 
 // @route    DELETE api/notes/:id
 // @desc     Delete a note
