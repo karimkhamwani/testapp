@@ -1,5 +1,3 @@
-const Joi = require('joi');
-
 /**
  * Middleware to validate request body using Joi schema
  * @param {Joi.Schema} schema - Joi schema to validate against
@@ -13,7 +11,7 @@ const validateBody = (schema) => {
     });
 
     if (error) {
-      const errors = error.details.map(detail => ({
+      const errors = error.details.map((detail) => ({
         field: detail.path.join('.'),
         message: detail.message
       }));

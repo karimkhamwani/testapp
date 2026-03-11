@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const validateBody = require('../../middleware/validateBody');
-const { createNoteSchema, updateNoteSchema } = require('../../validators/noteValidator');
+const {
+  createNoteSchema,
+  updateNoteSchema
+} = require('../../validators/noteValidator');
 
 // In-memory data structure to store notes
 let notes = [];
@@ -22,8 +25,9 @@ router.post('/', validateBody(createNoteSchema), (req, res) => {
     };
 
     notes.push(newNote);
-    
+
     console.log(`[NOTES API] Created new note with ID: ${newNote.id}`);
+
     console.log(`[NOTES API] Total notes: ${notes.length}`);
 
     res.status(201).json(newNote);
@@ -41,7 +45,9 @@ router.get('/', (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
 
     if (page < 1 || limit < 1) {
-      return res.status(400).json({ msg: 'Page and limit must be positive integers' });
+      return res
+        .status(400)
+        .json({ msg: 'Page and limit must be positive integers' });
     }
 
     const startIndex = (page - 1) * limit;
@@ -60,7 +66,9 @@ router.get('/', (req, res) => {
       hasPrevPage: page > 1
     };
 
-    console.log(`[NOTES API] Fetching notes - Page: ${page}, Limit: ${limit}, Total: ${totalNotes}`);
+    console.log(
+      `[NOTES API] Fetching notes - Page: ${page}, Limit: ${limit}, Total: ${totalNotes}`
+    );
 
     res.json({
       notes: paginatedNotes,
@@ -68,6 +76,7 @@ router.get('/', (req, res) => {
     });
   } catch (err) {
     console.error(err.message);
+
     res.status(500).send('Server Error');
   }
 });
@@ -77,7 +86,7 @@ router.get('/', (req, res) => {
 router.get('/:id', (req, res) => {
   try {
     const noteId = parseInt(req.params.id);
-    const note = notes.find(n => n.id === noteId);
+    const note = notes.find((n) => n.id === noteId);
 
     // return 404 if note not found
     if (!note) {
@@ -98,7 +107,7 @@ router.get('/:id', (req, res) => {
 router.put('/:id', validateBody(updateNoteSchema), (req, res) => {
   try {
     const noteId = parseInt(req.params.id);
-    const noteIndex = notes.findIndex(n => n.id === noteId);
+    const noteIndex = notes.findIndex((n) => n.id === noteId);
 
     if (noteIndex === -1) {
       console.log(`[NOTES API] Note not found for update with ID: ${noteId}`);
@@ -129,7 +138,7 @@ router.delete('/:id', (req, res) => {
     // convert the id to an integer
     const noteId = parseInt(req.params.id);
 
-    const noteIndex = notes.findIndex(n => n.id === noteId);
+    const noteIndex = notes.findIndex((n) => n.id === noteId);
 
     // return 404 if note not found
     if (noteIndex === -1) {
@@ -147,7 +156,7 @@ router.delete('/:id', (req, res) => {
     res.json({ message: 'Note deleted', note: deletedNote });
   } catch (err) {
     console.error(err.message);
-    
+
     res.status(500).send('Server Error');
   }
 });
